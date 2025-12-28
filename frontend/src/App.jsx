@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Youtube, Loader2, MessageSquare } from 'lucide-react';
 
 function App() {
   const [url, setUrl] = useState('');
   const [ingesting, setIngesting] = useState(false);
   const [ingestStatus, setIngestStatus] = useState('');
+  const [sessionId, setSessionId] = useState('');
 
   const [messages, setMessages] = useState([
     { role: 'system', content: 'Hello! I can answer questions about your YouTube videos. First, ingest a video or playlist URL above.' }
@@ -12,18 +13,48 @@ function App() {
   const [query, setQuery] = useState('');
   const [chatting, setChatting] = useState(false);
 
+  useEffect(() => {
+    const storedSession = localStorage.getItem('session_id');
+    if (storedSession) {
+      setSessionId(storedSession);
+      console.log('Restored session:', storedSession);
+    } else {
+      fetch('http://localhost:8000/session')
+        .then(res => res.json())
+        .then(data => {
+          setSessionId(data.session_id);
+          localStorage.setItem('session_id', data.session_id);
+          console.log('Created new session:', data.session_id);
+        })
+        .catch(err => console.error('Failed to init session:', err));
+    }
+  }, []);
+
   const handleIngest = async () => {
     if (!url) return;
     setIngesting(true);
     setIngestStatus('Starting ingestion...');
     try {
+      const payload = { url };
+      if (sessionId) {
+        payload.session_id = sessionId;
+      }
+
       const response = await fetch('http://localhost:8000/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+        body: JSON.stringify(payload)
       });
+
+      const data = await response.json();
+
       if (response.ok) {
         setIngestStatus('Ingestion started in background! You can start chatting shortly.');
+
+        if (data.session_id && data.session_id !== sessionId) {
+          setSessionId(data.session_id);
+          localStorage.setItem('session_id', data.session_id);
+        }
       } else {
         setIngestStatus('Ingestion failed to start.');
       }
@@ -36,6 +67,11 @@ function App() {
 
   const handleChat = async () => {
     if (!query) return;
+    if (!sessionId) {
+      setMessages(prev => [...prev, { role: 'system', content: 'Error: No session ID found. Please refresh.' }]);
+      return;
+    }
+
     const userMsg = { role: 'user', content: query };
     setMessages(prev => [...prev, userMsg]);
     setQuery('');
@@ -45,8 +81,13 @@ function App() {
       const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ query, session_id: sessionId })
       });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
       const data = await response.json();
       setMessages(prev => [...prev, { role: 'system', content: data.answer }]);
     } catch (error) {
@@ -63,6 +104,9 @@ function App() {
         <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-400">
           YT RAG Chat
         </h1>
+        <div className="ml-auto text-xs text-gray-500 font-mono">
+          Session: {sessionId ? sessionId.slice(0, 8) + '...' : 'Loading...'}
+        </div>
       </header>
 
       <main className="w-full max-w-4xl flex flex-col gap-6">

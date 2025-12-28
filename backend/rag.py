@@ -45,7 +45,7 @@ class RAGSystem:
         
         return self.pc.Index(PINECONE_INDEX_NAME)
 
-    def ingest(self, scraped_data: List[Dict]):
+    def ingest(self, session_id: str, scraped_data: List[Dict]):
         """Ingests scraped video transcripts into Pinecone."""
         vectors = []
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -54,16 +54,17 @@ class RAGSystem:
             chunks = text_splitter.split_text(item['text'])
             for i, chunk in enumerate(chunks):
                 vector_values = self.embeddings.embed_query(chunk)
-                vector_id = f"{item['video_id']}_{i}"
+                vector_id = f"{session_id}_{item['video_id']}_{i}"
                 metadata = {
                     "text": chunk,
                     "source": item['url'],
-                    "video_id": item['video_id']
+                    "video_id": item['video_id'],
+                    "session_id": session_id
                 }
                 vectors.append((vector_id, vector_values, metadata))
         
         if vectors:
-            logger.info(f"Upserting {len(vectors)} vectors to Pinecone...")
+            logger.info(f"Upserting {len(vectors)} vectors to Pinecone for session {session_id}...")
 
             batch_size = 100
             for i in range(0, len(vectors), batch_size):
@@ -73,14 +74,15 @@ class RAGSystem:
         else:
             logger.warning("No documents to ingest.")
 
-    def chat(self, query: str):
+    def chat(self, session_id: str, query: str):
         """Answers a question based on retrieved context."""
         query_embedding = self.embeddings.embed_query(query)
         
         results = self.index.query(
             vector=query_embedding,
             top_k=5,
-            include_metadata=True
+            include_metadata=True,
+            filter={"session_id": session_id}
         )
         
         context_parts = []
@@ -88,6 +90,9 @@ class RAGSystem:
             if match.metadata and "text" in match.metadata:
                 context_parts.append(match.metadata["text"])
         
+        if not context_parts:
+            return "I don't have enough context from your ingested videos to answer this question."
+
         context = "\n\n".join(context_parts)
 
         logger.info(f"Context: {context}")

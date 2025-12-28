@@ -77,7 +77,7 @@ class YouTubeScraper:
                     "text": text
                 })
 
-                logger.info("Scraped video text: ", text)
+                logger.info(f"Scraped video text: {text[:100]}...")
         
         return results
 
