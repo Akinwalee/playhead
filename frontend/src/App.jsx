@@ -49,14 +49,14 @@ function App() {
       const data = await response.json();
 
       if (response.ok) {
-        setIngestStatus('Ingestion started in background! You can start chatting shortly.');
+        setIngestStatus('Ingestion complete! You can start chatting now.');
 
         if (data.session_id && data.session_id !== sessionId) {
           setSessionId(data.session_id);
           localStorage.setItem('session_id', data.session_id);
         }
       } else {
-        setIngestStatus('Ingestion failed to start.');
+        setIngestStatus(`Ingestion failed: ${data.detail || 'Unknown error'}`);
       }
     } catch (error) {
       console.error(error);

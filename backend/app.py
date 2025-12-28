@@ -36,27 +36,29 @@ class SessionResponse(BaseModel):
 
 scraper = YouTubeScraper()
 
-def background_ingest(session_id: str, url: str):
-    logger.info(f"Starting background ingestion for session {session_id}: {url}")
-    try:
-        data = scraper.scrape(url)
-        if not data:
-            logger.warning("No data scraped.")
-            return
-        rag_system.ingest(session_id, data)
-        logger.info("Background ingestion completed.")
-    except Exception as e:
-        logger.error(f"Ingestion failed: {e}")
+def process_ingest(session_id: str, url: str):
+    logger.info(f"Starting ingestion for session {session_id}: {url}")
+    data = scraper.scrape(url)
+    if not data:
+        logger.warning("No data scraped.")
+        raise ValueError("No content found at URL")
+    
+    rag_system.ingest(session_id, data)
+    logger.info("Ingestion completed.")
 
 @app.post("/ingest")
-async def ingest_endpoint(request: IngestRequest, background_tasks: BackgroundTasks):
+async def ingest_endpoint(request: IngestRequest):
     session_id = request.session_id
     if not session_id:
         session_id = str(uuid4())
         logger.info(f"Generated new session_id: {session_id}")
     
-    background_tasks.add_task(background_ingest, session_id, request.url)
-    return {"message": "Ingestion started in background.", "session_id": session_id}
+    try:
+        process_ingest(session_id, request.url)
+        return {"message": "Ingestion successful.", "session_id": session_id}
+    except Exception as e:
+        logger.error(f"Ingestion failed: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
