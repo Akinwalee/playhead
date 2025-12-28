@@ -18,6 +18,9 @@ interface SessionApiResponse {
 
 
 
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
 function App() {
   const [url, setUrl] = useState<string>('');
   const [ingesting, setIngesting] = useState<boolean>(false);
@@ -44,7 +47,7 @@ function App() {
       setSessionId(storedSession);
       console.log('Restored session:', storedSession);
     } else {
-      fetch('http://localhost:8000/session')
+      fetch(`${BACKEND_URL}/session`)
         .then(res => res.json())
         .then((data: SessionApiResponse) => {
           setSessionId(data.session_id);
@@ -65,7 +68,7 @@ function App() {
         payload.session_id = sessionId;
       }
 
-      const response = await fetch('http://localhost:8000/ingest', {
+      const response = await fetch(`${BACKEND_URL}/ingest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -119,7 +122,7 @@ function App() {
     setChatting(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, session_id: sessionId })
