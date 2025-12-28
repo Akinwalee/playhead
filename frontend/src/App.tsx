@@ -1,23 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Send, Youtube, Loader2, MessageSquare } from 'lucide-react';
+import { Send, Youtube, Loader2 } from 'lucide-react';
+
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface Video {
+  video_id: string;
+  title: string;
+  url: string;
+}
+
+interface SessionApiResponse {
+  session_id: string;
+}
+
+interface VideosApiResponse {
+  videos: Video[];
+}
 
 function App() {
-  const [url, setUrl] = useState('');
-  const [ingesting, setIngesting] = useState(false);
-  const [ingestStatus, setIngestStatus] = useState('');
-  const [sessionId, setSessionId] = useState('');
+  const [url, setUrl] = useState<string>('');
+  const [ingesting, setIngesting] = useState<boolean>(false);
+  const [ingestStatus, setIngestStatus] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>('');
 
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { role: 'system', content: 'Hello! I can answer questions about your YouTube videos. First, ingest a video or playlist URL above.' }
   ]);
-  const [query, setQuery] = useState('');
-  const [chatting, setChatting] = useState(false);
-  const [videos, setVideos] = useState([]);
+  const [query, setQuery] = useState<string>('');
+  const [chatting, setChatting] = useState<boolean>(false);
+  const [videos, setVideos] = useState<Video[]>([]);
 
-  const fetchVideos = async (sid) => {
+  const fetchVideos = async (sid: string) => {
     try {
       const res = await fetch(`http://localhost:8000/session/${sid}/videos`);
-      const data = await res.json();
+      const data: VideosApiResponse = await res.json();
       setVideos(data.videos);
     } catch (err) {
       console.error('Failed to fetch videos:', err);
@@ -33,7 +52,7 @@ function App() {
     } else {
       fetch('http://localhost:8000/session')
         .then(res => res.json())
-        .then(data => {
+        .then((data: SessionApiResponse) => {
           setSessionId(data.session_id);
           localStorage.setItem('session_id', data.session_id);
           console.log('Created new session:', data.session_id);
@@ -47,7 +66,7 @@ function App() {
     setIngesting(true);
     setIngestStatus('Starting ingestion...');
     try {
-      const payload = { url };
+      const payload: { url: string; session_id?: string } = { url };
       if (sessionId) {
         payload.session_id = sessionId;
       }
@@ -88,7 +107,7 @@ function App() {
       return;
     }
 
-    const userMsg = { role: 'user', content: query };
+    const userMsg: Message = { role: 'user', content: query };
     setMessages(prev => [...prev, userMsg]);
     setQuery('');
     setChatting(true);
