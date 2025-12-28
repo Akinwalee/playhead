@@ -12,11 +12,23 @@ function App() {
   ]);
   const [query, setQuery] = useState('');
   const [chatting, setChatting] = useState(false);
+  const [videos, setVideos] = useState([]);
+
+  const fetchVideos = async (sid) => {
+    try {
+      const res = await fetch(`http://localhost:8000/session/${sid}/videos`);
+      const data = await res.json();
+      setVideos(data.videos);
+    } catch (err) {
+      console.error('Failed to fetch videos:', err);
+    }
+  };
 
   useEffect(() => {
     const storedSession = localStorage.getItem('session_id');
     if (storedSession) {
       setSessionId(storedSession);
+      fetchVideos(storedSession);
       console.log('Restored session:', storedSession);
     } else {
       fetch('http://localhost:8000/session')
@@ -51,10 +63,14 @@ function App() {
       if (response.ok) {
         setIngestStatus('Ingestion complete! You can start chatting now.');
 
+        let currentSessionId = sessionId;
         if (data.session_id && data.session_id !== sessionId) {
           setSessionId(data.session_id);
           localStorage.setItem('session_id', data.session_id);
+          currentSessionId = data.session_id;
         }
+
+        fetchVideos(currentSessionId);
       } else {
         setIngestStatus(`Ingestion failed: ${data.detail || 'Unknown error'}`);
       }
@@ -136,6 +152,27 @@ function App() {
             <p className="mt-3 text-sm text-gray-400 animate-pulse">
               {ingestStatus}
             </p>
+          )}
+
+          {/* Video List */}
+          {videos.length > 0 && (
+            <div className="mt-6 border-t border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold text-gray-400 mb-2">Ingested Videos</h3>
+              <div className="flex flex-wrap gap-2">
+                {videos.map((vid) => (
+                  <a
+                    key={vid.video_id}
+                    href={vid.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-gray-700 hover:bg-gray-600 text-xs px-3 py-1 rounded-full text-blue-300 transition-colors flex items-center gap-1"
+                  >
+                    <Youtube className="w-3 h-3" />
+                    {vid.title}
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </section>
 

@@ -62,6 +62,17 @@ class YouTubeScraper:
             logger.warning(f"No transcript found for {video_id}: {e}")
             return None
 
+    def get_video_title(self, video_id: str) -> str:
+        """Fetches video title using yt-dlp."""
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+            try:
+                info = ydl.extract_info(url, download=False)
+                return info.get('title', 'Unknown Title')
+            except Exception as e:
+                logger.error(f"Error fetching title for {video_id}: {e}")
+                return "Unknown Title"
+
     def scrape(self, url: str) -> List[Dict]:
         """Main entry point: Scrapes transcripts for all videos found at URL."""
         video_ids = self.get_video_ids(url)
@@ -71,13 +82,15 @@ class YouTubeScraper:
         for vid in video_ids:
             text = self.get_transcript(vid)
             if text:
+                title = self.get_video_title(vid)
                 results.append({
                     "video_id": vid,
                     "url": f"https://www.youtube.com/watch?v={vid}",
-                    "text": text
+                    "text": text,
+                    "title": title
                 })
 
-                logger.info(f"Scraped video text: {text[:100]}...")
+                logger.info(f"Scraped video: {title} ({vid})")
         
         return results
 
