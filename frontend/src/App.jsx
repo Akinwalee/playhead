@@ -102,7 +102,7 @@ function App() {
       <header className="w-full max-w-4xl flex items-center gap-2 py-6 border-b border-gray-800 mb-8">
         <Youtube className="text-red-500 w-8 h-8" />
         <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-400">
-          YT RAG Chat
+          PlayHead
         </h1>
         <div className="ml-auto text-xs text-gray-500 font-mono">
           Session: {sessionId ? sessionId.slice(0, 8) + '...' : 'Loading...'}
