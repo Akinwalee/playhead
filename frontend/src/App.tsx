@@ -16,9 +16,7 @@ interface SessionApiResponse {
   session_id: string;
 }
 
-interface VideosApiResponse {
-  videos: Video[];
-}
+
 
 function App() {
   const [url, setUrl] = useState<string>('');
@@ -31,23 +29,19 @@ function App() {
   ]);
   const [query, setQuery] = useState<string>('');
   const [chatting, setChatting] = useState<boolean>(false);
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [videos, setVideos] = useState<Video[]>(() => {
+    const saved = localStorage.getItem('session_videos');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const fetchVideos = async (sid: string) => {
-    try {
-      const res = await fetch(`http://localhost:8000/session/${sid}/videos`);
-      const data: VideosApiResponse = await res.json();
-      setVideos(data.videos);
-    } catch (err) {
-      console.error('Failed to fetch videos:', err);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem('session_videos', JSON.stringify(videos));
+  }, [videos]);
 
   useEffect(() => {
     const storedSession = localStorage.getItem('session_id');
     if (storedSession) {
       setSessionId(storedSession);
-      fetchVideos(storedSession);
       console.log('Restored session:', storedSession);
     } else {
       fetch('http://localhost:8000/session')
@@ -77,21 +71,33 @@ function App() {
         body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      interface IngestResponse extends SessionApiResponse {
+        videos: Video[];
+        message: string;
+      }
+
+      const data: IngestResponse = await response.json();
 
       if (response.ok) {
         setIngestStatus('Ingestion complete! You can start chatting now.');
 
-        let currentSessionId = sessionId;
         if (data.session_id && data.session_id !== sessionId) {
           setSessionId(data.session_id);
           localStorage.setItem('session_id', data.session_id);
-          currentSessionId = data.session_id;
         }
 
-        fetchVideos(currentSessionId);
+        setVideos(prev => {
+          const newVideos = [...prev];
+          data.videos.forEach(v => {
+            if (!newVideos.some(existing => existing.video_id === v.video_id)) {
+              newVideos.push(v);
+            }
+          });
+          return newVideos;
+        });
+
       } else {
-        setIngestStatus(`Ingestion failed: ${data.detail || 'Unknown error'}`);
+        setIngestStatus(`Ingestion failed: ${(data as any).detail || 'Unknown error'}`);
       }
     } catch (error) {
       console.error(error);

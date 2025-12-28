@@ -40,7 +40,7 @@ scraper = YouTubeScraper()
 db = Database()
 
 
-def process_ingest(session_id: str, url: str):
+def process_ingest(session_id: str, url: str) -> List[Dict]:
     logger.info(f"Starting ingestion for session {session_id}: {url}")
     data = scraper.scrape(url)
     if not data:
@@ -49,14 +49,18 @@ def process_ingest(session_id: str, url: str):
     
     rag_system.ingest(session_id, data)
     
+    video_list = []
     for video in data:
-        db.add_video(session_id, {
+        video_info = {
             "video_id": video['video_id'],
             "title": video.get('title', 'Unknown Title'),
             "url": video['url']
-        })
+        }
+        db.add_video(session_id, video_info)
+        video_list.append(video_info)
 
     logger.info("Ingestion completed.")
+    return video_list
 
 @app.post("/ingest")
 async def ingest_endpoint(request: IngestRequest):
@@ -66,8 +70,8 @@ async def ingest_endpoint(request: IngestRequest):
         logger.info(f"Generated new session_id: {session_id}")
     
     try:
-        process_ingest(session_id, request.url)
-        return {"message": "Ingestion successful.", "session_id": session_id}
+        videos = process_ingest(session_id, request.url)
+        return {"message": "Ingestion successful.", "session_id": session_id, "videos": videos}
     except Exception as e:
         logger.error(f"Ingestion failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
