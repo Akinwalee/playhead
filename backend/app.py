@@ -1,4 +1,3 @@
-import logging
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,9 +7,9 @@ from typing import List, Dict
 from scraper import YouTubeScraper
 from rag import rag_system
 from db import Database
+from logger import get_logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI(title="YouTube RAG Chat")
 

@@ -1,5 +1,4 @@
 import os
-import logging
 from typing import List, Dict
 
 from dotenv import load_dotenv
@@ -8,9 +7,11 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from pinecone import Pinecone, ServerlessSpec
 
+from logger import get_logger
+
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "yt-rag-chat")

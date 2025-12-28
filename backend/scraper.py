@@ -1,4 +1,3 @@
-import logging
 import re
 from typing import List, Dict, Optional
 from urllib.parse import parse_qs, urlparse
@@ -6,7 +5,9 @@ from urllib.parse import parse_qs, urlparse
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import yt_dlp
 
-logger = logging.getLogger(__name__)
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 class YouTubeScraper:
     def __init__(self):
@@ -95,6 +96,7 @@ class YouTubeScraper:
         return results
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO) # Removed
+
     scraper = YouTubeScraper()
     # print(scraper.scrape("https://www.youtube.com/watch?v=jNQXAC9IVRw")) 
